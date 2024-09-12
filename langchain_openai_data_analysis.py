@@ -5,6 +5,7 @@ from langchain.chat_models import ChatOpenAI
 from langchain.agents import AgentType, initialize_agent
 from langchain.callbacks import StreamlitCallbackHandler
 from langchain.tools import Tool
+from pydantic import BaseModel, Field
 
 # Set up OpenAI API key
 if 'OPENAI_API_KEY' not in st.secrets:
@@ -38,12 +39,11 @@ if uploaded_file is not None:
 
     # Create a custom tool for executing Python code
     class PythonREPLTool(Tool):
-        def __init__(self, locals):
-            self.name = "python_repl"
-            self.description = "Executes Python code"
-            self.locals = locals
+        name: str = "python_repl"
+        description: str = "Executes Python code"
+        locals: dict = Field(default_factory=dict)
 
-        def _run(self, code):
+        def _run(self, code: str) -> str:
             exec(code, globals(), self.locals)
             return self.locals.get("result", "No result returned")
 
