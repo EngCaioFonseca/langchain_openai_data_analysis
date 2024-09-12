@@ -1,8 +1,8 @@
 import streamlit as st
 import pandas as pd
 import io
+from langchain_community.chat_models import ChatOpenAI
 from langchain.agents import AgentType, initialize_agent
-from langchain.chat_models import ChatOpenAI
 from langchain.callbacks import StreamlitCallbackHandler
 from langchain.tools import PythonAstREPLTool
 
