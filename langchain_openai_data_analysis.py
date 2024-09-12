@@ -2,10 +2,8 @@ import streamlit as st
 import pandas as pd
 import io
 from langchain.chat_models import ChatOpenAI
-from langchain.agents import AgentType, initialize_agent
+from langchain.agents import AgentType, initialize_agent, Tool
 from langchain.callbacks import StreamlitCallbackHandler
-from langchain.tools import Tool
-from pydantic import BaseModel, Field
 
 # Set up OpenAI API key
 if 'OPENAI_API_KEY' not in st.secrets:
@@ -37,21 +35,22 @@ if uploaded_file is not None:
     s = buffer.getvalue()
     st.text(s)
 
-    # Create a custom tool for executing Python code
-    class PythonREPLTool(Tool):
-        name: str = "python_repl"
-        description: str = "Executes Python code"
-        locals: dict = Field(default_factory=dict)
+    # Create a function to execute Python code
+    def execute_python(code: str) -> str:
+        local_vars = {"df": df, "pd": pd}
+        exec(code, globals(), local_vars)
+        return local_vars.get("result", "No result returned")
 
-        def _run(self, code: str) -> str:
-            exec(code, globals(), self.locals)
-            return self.locals.get("result", "No result returned")
-
-    python_repl = PythonREPLTool(locals={"df": df, "pd": pd})
+    # Create a tool for the agent to use
+    python_tool = Tool(
+        name="Python REPL",
+        func=execute_python,
+        description="Executes Python code. Use this to perform operations on the 'df' DataFrame."
+    )
 
     # Initialize agent
     agent = initialize_agent(
-        [python_repl],
+        [python_tool],
         llm,
         agent=AgentType.ZERO_SHOT_REACT_DESCRIPTION,
         verbose=True
@@ -64,13 +63,8 @@ if uploaded_file is not None:
         if user_input:
             with st.spinner('Analyzing...'):
                 st_callback = StreamlitCallbackHandler(st.container())
-                # Prepare the DataFrame and the question for the agent
-                setup_code = f"""
-import pandas as pd
-df = pd.DataFrame({df.to_dict()})
-result = None
-"""
-                question = f"{setup_code}\n\n# Now, answer this question about the DataFrame:\n{user_input}\nresult = answer"
+                # Prepare the question for the agent
+                question = f"Using the 'df' DataFrame, answer this question: {user_input}"
                 response = agent.run(question, callbacks=[st_callback])
                 st.write("Analysis Result:")
                 st.write(response)
