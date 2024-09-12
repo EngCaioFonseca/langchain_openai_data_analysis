@@ -39,7 +39,8 @@ if uploaded_file is not None:
     # Create a custom tool for executing Python code
     class PythonREPLTool(Tool):
         def __init__(self, locals):
-            super().__init__(name="python_repl", description="Executes Python code")
+            self.name = "python_repl"
+            self.description = "Executes Python code"
             self.locals = locals
 
         def _run(self, code):
