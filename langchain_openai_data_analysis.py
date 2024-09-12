@@ -1,8 +1,8 @@
 import streamlit as st
 import pandas as pd
 import io
-from langchain.agents import create_pandas_dataframe_agent
-from langchain.llms import OpenAI
+from langchain_experimental.agents import create_pandas_dataframe_agent
+from langchain.chat_models import ChatOpenAI
 from langchain.callbacks import StreamlitCallbackHandler
 
 # Set up OpenAI API key
@@ -10,8 +10,8 @@ if 'OPENAI_API_KEY' not in st.secrets:
     st.error("OPENAI_API_KEY is not set in the Streamlit secrets. Please set it up as described in the README.")
     st.stop()
 
-# Initialize OpenAI LLM
-llm = OpenAI(model_name="gpt-4", temperature=0, openai_api_key=st.secrets["OPENAI_API_KEY"])
+# Initialize OpenAI Chat model
+llm = ChatOpenAI(temperature=0, openai_api_key=st.secrets["OPENAI_API_KEY"])
 
 st.title("LangChain Data Analysis Assistant")
 
@@ -58,7 +58,7 @@ chat_input = st.sidebar.text_input("Ask a general question:")
 if st.sidebar.button("Send"):
     if chat_input:
         with st.sidebar.spinner('Thinking...'):
-            response = llm(chat_input)
+            response = llm.predict(chat_input)
             st.sidebar.write("LLM Response:")
             st.sidebar.write(response)
     else:
