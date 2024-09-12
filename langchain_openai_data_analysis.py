@@ -1,9 +1,10 @@
 import streamlit as st
 import pandas as pd
 import io
-from langchain_experimental.agents import create_pandas_dataframe_agent
+from langchain.agents import AgentType, initialize_agent
 from langchain.chat_models import ChatOpenAI
 from langchain.callbacks import StreamlitCallbackHandler
+from langchain.tools import PythonAstREPLTool
 
 # Set up OpenAI API key
 if 'OPENAI_API_KEY' not in st.secrets:
@@ -11,7 +12,7 @@ if 'OPENAI_API_KEY' not in st.secrets:
     st.stop()
 
 # Initialize OpenAI Chat model
-llm = ChatOpenAI(temperature=0, openai_api_key=st.secrets["OPENAI_API_KEY"])
+llm = ChatOpenAI(model="gpt-3.5-turbo", temperature=0, openai_api_key=st.secrets["OPENAI_API_KEY"])
 
 st.title("LangChain Data Analysis Assistant")
 
@@ -35,8 +36,16 @@ if uploaded_file is not None:
     s = buffer.getvalue()
     st.text(s)
 
-    # Create Pandas DataFrame Agent
-    agent = create_pandas_dataframe_agent(llm, df, verbose=True)
+    # Create Python REPL Tool
+    python_repl = PythonAstREPLTool(locals={"df": df, "pd": pd})
+
+    # Initialize agent
+    agent = initialize_agent(
+        [python_repl],
+        llm,
+        agent=AgentType.ZERO_SHOT_REACT_DESCRIPTION,
+        verbose=True
+    )
 
     # User input for analysis
     user_input = st.text_area("Ask a question about the data:", height=100)
@@ -45,7 +54,7 @@ if uploaded_file is not None:
         if user_input:
             with st.spinner('Analyzing...'):
                 st_callback = StreamlitCallbackHandler(st.container())
-                response = agent.run(user_input, callbacks=[st_callback])
+                response = agent.run(f"Using the 'df' DataFrame, {user_input}", callbacks=[st_callback])
                 st.write("Analysis Result:")
                 st.write(response)
         else:
