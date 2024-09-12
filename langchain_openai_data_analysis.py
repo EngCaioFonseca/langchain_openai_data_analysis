@@ -4,7 +4,7 @@ import io
 from langchain_community.chat_models import ChatOpenAI
 from langchain.agents import AgentType, initialize_agent
 from langchain.callbacks import StreamlitCallbackHandler
-from langchain.tools import PythonAstREPLTool
+from langchain_community.tools import PythonREPLTool
 
 # Set up OpenAI API key
 if 'OPENAI_API_KEY' not in st.secrets:
@@ -37,7 +37,7 @@ if uploaded_file is not None:
     st.text(s)
 
     # Create Python REPL Tool
-    python_repl = PythonAstREPLTool(locals={"df": df, "pd": pd})
+    python_repl = PythonREPLTool()
 
     # Initialize agent
     agent = initialize_agent(
@@ -54,7 +54,13 @@ if uploaded_file is not None:
         if user_input:
             with st.spinner('Analyzing...'):
                 st_callback = StreamlitCallbackHandler(st.container())
-                response = agent.run(f"Using the 'df' DataFrame, {user_input}", callbacks=[st_callback])
+                # Prepare the DataFrame and the question for the agent
+                setup_code = f"""
+import pandas as pd
+df = pd.DataFrame({df.to_dict()})
+"""
+                question = f"{setup_code}\n\n# Now, answer this question about the DataFrame:\n{user_input}"
+                response = agent.run(question, callbacks=[st_callback])
                 st.write("Analysis Result:")
                 st.write(response)
         else:
