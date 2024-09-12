@@ -4,3 +4,4 @@ openpyxl
 langchain
 langchain-community
 openai
+pydantic
