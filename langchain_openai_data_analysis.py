@@ -1,10 +1,10 @@
 import streamlit as st
 import pandas as pd
 import io
-from langchain_community.chat_models import ChatOpenAI
+from langchain.chat_models import ChatOpenAI
 from langchain.agents import AgentType, initialize_agent
 from langchain.callbacks import StreamlitCallbackHandler
-from langchain_community.tools import PythonREPLTool
+from langchain.tools import Tool
 
 # Set up OpenAI API key
 if 'OPENAI_API_KEY' not in st.secrets:
@@ -36,8 +36,17 @@ if uploaded_file is not None:
     s = buffer.getvalue()
     st.text(s)
 
-    # Create Python REPL Tool
-    python_repl = PythonREPLTool()
+    # Create a custom tool for executing Python code
+    class PythonREPLTool(Tool):
+        def __init__(self, locals):
+            super().__init__(name="python_repl", description="Executes Python code")
+            self.locals = locals
+
+        def _run(self, code):
+            exec(code, globals(), self.locals)
+            return self.locals.get("result", "No result returned")
+
+    python_repl = PythonREPLTool(locals={"df": df, "pd": pd})
 
     # Initialize agent
     agent = initialize_agent(
@@ -58,8 +67,9 @@ if uploaded_file is not None:
                 setup_code = f"""
 import pandas as pd
 df = pd.DataFrame({df.to_dict()})
+result = None
 """
-                question = f"{setup_code}\n\n# Now, answer this question about the DataFrame:\n{user_input}"
+                question = f"{setup_code}\n\n# Now, answer this question about the DataFrame:\n{user_input}\nresult = answer"
                 response = agent.run(question, callbacks=[st_callback])
                 st.write("Analysis Result:")
                 st.write(response)
